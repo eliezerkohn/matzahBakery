@@ -1,0 +1,6 @@
+@MatzahBakery.Web_HostAddress = http://localhost:5237
+
+GET {{MatzahBakery.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 110" width="220" height="110">
+  <defs>
+    <linearGradient id="brickBase" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4B1110"/>
+      <stop offset="100%" stop-color="#2A0808"/>
+    </linearGradient>
+    <linearGradient id="brickFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BB5A49"/>
+      <stop offset="60%" stop-color="#9B3F32"/>
+      <stop offset="100%" stop-color="#7A2B24"/>
+    </linearGradient>
+    <pattern id="brickPattern" width="220" height="110" patternUnits="userSpaceOnUse">
+      <rect width="220" height="110" fill="url(#brickBase)"/>
+
+      <rect x="0" y="50" width="220" height="6" fill="#2A0808"/>
+      <rect x="0" y="0" width="220" height="6" fill="#2A0808"/>
+
+      <rect x="106" y="8" width="8" height="40" fill="#2A0808"/>
+
+      <rect x="8" y="8" width="98" height="40" rx="5" fill="url(#brickFace)"/>
+      <rect x="114" y="8" width="98" height="40" rx="5" fill="url(#brickFace)"/>
+      <rect x="-48" y="60" width="98" height="40" rx="5" fill="url(#brickFace)"/>
+      <rect x="58" y="60" width="98" height="40" rx="5" fill="url(#brickFace)"/>
+      <rect x="164" y="60" width="98" height="40" rx="5" fill="url(#brickFace)"/>
+
+      <rect x="20" y="16" width="70" height="4" fill="#D28066" opacity="0.35"/>
+      <rect x="126" y="16" width="70" height="4" fill="#D28066" opacity="0.35"/>
+      <rect x="70" y="68" width="70" height="4" fill="#D28066" opacity="0.35"/>
+    </pattern>
+  </defs>
+
+  <rect width="220" height="110" fill="url(#brickPattern)"/>
+</svg>
