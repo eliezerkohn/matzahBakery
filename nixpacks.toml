@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["dotnet-sdk_8", "nodejs_20", "nodePackages.npm"]
+nixPkgs = ["dotnet-sdk_8", "nodejs_20"]
 
 [phases.build]
 cmds = ["dotnet publish -c Release -o out"]
