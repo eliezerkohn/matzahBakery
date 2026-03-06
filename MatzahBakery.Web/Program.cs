@@ -19,7 +19,9 @@ public class Program
             app.UseHsts();
         }
 
+        app.UseDefaultFiles();
         app.UseStaticFiles();
+
         if (app.Environment.IsDevelopment())
         {
             var psi = new System.Diagnostics.ProcessStartInfo
@@ -29,7 +31,7 @@ public class Program
                 WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "ClientApp"),
                 UseShellExecute = true
             };
-        
+
             var spaProcess = System.Diagnostics.Process.Start(psi);
             app.Lifetime.ApplicationStopping.Register(() =>
             {
@@ -39,13 +41,16 @@ public class Program
                 }
             });
         }
+
         app.UseRouting();
 
-		app.MapControllers();
+        app.MapControllers();
 
         app.MapControllerRoute(
             name: "default",
-            pattern: "{controller}/{action=Index}/{id?}");
+            pattern: "{controller=Home}/{action=Index}/{id?}");
+
+        app.MapFallbackToFile("index.html");
 
         app.Run();
     }
