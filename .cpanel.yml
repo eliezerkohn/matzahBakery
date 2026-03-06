@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/o254zcyzgdlc/public_html/matzahBakery
+    - /bin/cp -R * $DEPLOYPATH

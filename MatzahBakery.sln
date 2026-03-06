@@ -9,6 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatzahBakery.Data", "Matzah
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DF9554E0-D8E4-42D0-AC53-E6F09F3DEC1B}"
 	ProjectSection(SolutionItems) = preProject
+		.cpanel.yml = .cpanel.yml
 		gitignore = gitignore
 	EndProjectSection
 EndProject
