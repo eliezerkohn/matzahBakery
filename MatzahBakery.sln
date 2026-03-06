@@ -10,8 +10,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DF9554E0-D8E4-42D0-AC53-E6F09F3DEC1B}"
 	ProjectSection(SolutionItems) = preProject
 		.cpanel.yml = .cpanel.yml
+		Dockerfile.txt = Dockerfile.txt
 		gitignore = gitignore
-		nixpacks.toml = nixpacks.toml
 		railway.json = railway.json
 	EndProjectSection
 EndProject
