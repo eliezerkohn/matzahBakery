@@ -8,8 +8,13 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddScoped(_ =>
-            new MatzahBakeryDataContext(builder.Configuration.GetConnectionString("ConStr")!));
+        var connStr = builder.Configuration.GetConnectionString("ConStr");
+        if (string.IsNullOrWhiteSpace(connStr))
+        {
+            throw new InvalidOperationException("Missing connection string: ConnectionStrings:ConStr");
+        }
+
+        builder.Services.AddScoped(_ => new MatzahBakeryDataContext(connStr));
         builder.Services.AddControllersWithViews();
 
         var app = builder.Build();
