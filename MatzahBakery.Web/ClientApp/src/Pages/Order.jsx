@@ -550,9 +550,11 @@ const Order = () => {
                 submittedOrderId={submittedOrderId}
                 onClose={() => {
                     setShowSuccessPopup(false);
-                    resetOrderInputs();
+                    if (!isEditingOrder) {
+                        resetOrderInputs();
+                    }
                 }}
-                onBackHome={() => navigate('/')}
+                onBackHome={() => navigate(isEditingOrder ? '/admin/orders' : '/')}
             />
         </div>
     );

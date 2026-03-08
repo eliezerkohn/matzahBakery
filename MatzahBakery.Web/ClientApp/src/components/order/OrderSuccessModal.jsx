@@ -22,7 +22,7 @@ const OrderSuccessModal = ({ show, isEditingOrder, submittedOrderId, onClose, on
                         Close
                     </button>
                     <button type="button" className="btn btn-dark" onClick={onBackHome}>
-                        Back Home
+                        {isEditingOrder ? 'Back To Orders' : 'Back Home'}
                     </button>
                 </div>
             </div>
