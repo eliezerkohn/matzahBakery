@@ -210,6 +210,9 @@ PublishScripts/
 csx/
 *.build.csdef
 
+# Local secret overrides for the web app
+MatzahBakery.Web/appsettings.Local.json
+
 # Microsoft Azure Emulator
 ecf/
 rcf/

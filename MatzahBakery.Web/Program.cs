@@ -1,5 +1,5 @@
 using MatzahBakery.Data;
-
+using Microsoft.EntityFrameworkCore;
 namespace MatzahBakery.Web;
 
 public class Program
@@ -7,26 +7,21 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
+        builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
         var connStr = builder.Configuration.GetConnectionString("ConStr");
         if (string.IsNullOrWhiteSpace(connStr))
         {
             throw new InvalidOperationException("Missing connection string: ConnectionStrings:ConStr");
         }
-
         builder.Services.AddScoped(_ => new MatzahBakeryDataContext(connStr));
         builder.Services.AddControllersWithViews();
-
         var app = builder.Build();
-
         if (!app.Environment.IsDevelopment())
         {
             app.UseHsts();
         }
-
         app.UseDefaultFiles();
         app.UseStaticFiles();
-
         if (app.Environment.IsDevelopment())
         {
             var psi = new System.Diagnostics.ProcessStartInfo
@@ -36,7 +31,6 @@ public class Program
                 WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "ClientApp"),
                 UseShellExecute = true
             };
-
             var spaProcess = System.Diagnostics.Process.Start(psi);
             app.Lifetime.ApplicationStopping.Register(() =>
             {
@@ -46,16 +40,20 @@ public class Program
                 }
             });
         }
-
         app.UseRouting();
-
         app.MapControllers();
-
         app.MapControllerRoute(
             name: "default",
             pattern: "{controller=Home}/{action=Index}/{id?}");
-
         app.MapFallbackToFile("index.html");
+
+        // Auto run migrations on startup
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider
+                .GetRequiredService<MatzahBakeryDataContext>();
+            db.Database.Migrate();
+        }
 
         app.Run();
     }
