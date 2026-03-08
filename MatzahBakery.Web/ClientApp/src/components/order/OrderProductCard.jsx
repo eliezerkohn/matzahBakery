@@ -1,5 +1,8 @@
+import { sortTypesWithRegularFirst } from '../../utils/sorters';
+
 const OrderProductCard = ({ product, typeQuantities, getLineKey, updateTypeQuantity, formatCurrency }) => {
     const productBasePrice = Number(product.productPrice) || 0;
+    const sortedTypes = sortTypesWithRegularFirst(product.types || []);
 
     return (
         <div className="card order-card">
@@ -11,11 +14,11 @@ const OrderProductCard = ({ product, typeQuantities, getLineKey, updateTypeQuant
                     </div>
                 </div>
 
-                {!(product.types || []).length && (
+                {!sortedTypes.length && (
                     <div className="text-muted">No types available for this product.</div>
                 )}
 
-                {!!(product.types || []).length && (
+                {!!sortedTypes.length && (
                     <div className="table-responsive">
                         <table className="table table-sm align-middle mb-0 order-types-table">
                             <thead>
@@ -28,7 +31,7 @@ const OrderProductCard = ({ product, typeQuantities, getLineKey, updateTypeQuant
                                 </tr>
                             </thead>
                             <tbody>
-                                {(product.types || []).map((type) => {
+                                {sortedTypes.map((type) => {
                                     const key = getLineKey(product.productId, type.productTypeId);
                                     const quantity = Number(typeQuantities[key]) || 0;
                                     const typePrice = Number(type.typePrice) || 0;

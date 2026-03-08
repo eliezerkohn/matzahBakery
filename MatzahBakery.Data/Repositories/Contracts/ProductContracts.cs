@@ -34,3 +34,11 @@ public class UpdateTypeInProductResult
     public string ProductTypeName { get; set; } = string.Empty;
     public decimal TypePrice { get; set; }
 }
+
+// Tag: Delete Product Type Link Status
+public enum DeleteTypeFromProductStatus
+{
+    NotFound,
+    InUseByOrders,
+    Deleted
+}

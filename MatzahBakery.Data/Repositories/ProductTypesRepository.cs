@@ -17,7 +17,9 @@ public class ProductTypesRepository
     {
         return await _context.productTypes
             .AsNoTracking()
-            .OrderBy(type => type.ProductTypeId)
+            .OrderBy(type => ((type.TypeName ?? string.Empty).ToLower() == "regular") ? 0 : 1)
+            .ThenBy(type => type.TypeName)
+            .ThenBy(type => type.ProductTypeId)
             .ToListAsync();
     }
 

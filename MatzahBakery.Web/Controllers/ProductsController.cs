@@ -110,11 +110,20 @@ namespace MatzahBakery.Web.Controllers
         [HttpDelete("{productId}/types/{productTypeId}")]
         public async Task<IActionResult> DeleteType(int productId, int productTypeId)
         {
-            var deleted = await _repository.DeleteTypeFromProductAsync(productId, productTypeId);
-            if (!deleted)
+            var result = await _repository.DeleteTypeFromProductAsync(productId, productTypeId);
+            if (result == DeleteTypeFromProductStatus.NotFound)
             {
                 return NotFound();
             }
+
+            if (result == DeleteTypeFromProductStatus.InUseByOrders)
+            {
+                return BadRequest(new
+                {
+                    message = "Cannot remove this type because it is used by existing orders."
+                });
+            }
+
             return NoContent();
         }
 
@@ -167,7 +176,6 @@ namespace MatzahBakery.Web.Controllers
                         ProductTypeName = link.ProductType?.TypeName ?? string.Empty,
                         TypePrice = link.Price
                     })
-                    .OrderBy(type => type.ProductTypeId)
                     .ToList()
             };
         }

@@ -16,12 +16,13 @@ public class ProductsRepository
     // Tag: Read Products With Types
     public async Task<List<Product>> GetAllProductsWithTypesAsync()
     {
-        return await _context.products
+        var products = await _context.products
             .AsNoTracking()
             .Include(p => p.productToProductTypes)
             .ThenInclude(link => link.ProductType)
-            .OrderBy(p => p.ProductId)
             .ToListAsync();
+
+        return ApplyDisplayOrdering(products);
     }
 
     // Tag: Create Product
@@ -51,11 +52,41 @@ public class ProductsRepository
         product.Price = productPrice;
         await _context.SaveChangesAsync();
 
-        return await _context.products
+        var updatedProduct = await _context.products
             .AsNoTracking()
             .Include(p => p.productToProductTypes)
             .ThenInclude(link => link.ProductType)
             .FirstOrDefaultAsync(item => item.ProductId == productId);
+
+        return updatedProduct == null
+            ? null
+            : ApplyDisplayOrdering(new List<Product> { updatedProduct }).FirstOrDefault();
+    }
+
+    // Tag: Display Ordering Rules
+    private static List<Product> ApplyDisplayOrdering(List<Product> products)
+    {
+        foreach (var product in products)
+        {
+            product.productToProductTypes = (product.productToProductTypes ?? new List<ProductToProductType>())
+                .OrderBy(link => GetDisplayPriority(link?.ProductType?.TypeName))
+                .ThenBy(link => link?.ProductType?.TypeName)
+                .ThenBy(link => link.ProductTypeId)
+                .ToList();
+        }
+
+        return products
+            .OrderBy(product => GetDisplayPriority(product.ProductName))
+            .ThenBy(product => product.ProductName)
+            .ThenBy(product => product.ProductId)
+            .ToList();
+    }
+
+    private static int GetDisplayPriority(string name)
+    {
+        return string.Equals((name ?? string.Empty).Trim(), "Regular", StringComparison.OrdinalIgnoreCase)
+            ? 0
+            : 1;
     }
 
     // Tag: Delete Product And Links
@@ -159,19 +190,28 @@ public class ProductsRepository
     }
 
     // Tag: Delete Type Link From Product
-    public async Task<bool> DeleteTypeFromProductAsync(int productId, int productTypeId)
+    public async Task<DeleteTypeFromProductStatus> DeleteTypeFromProductAsync(int productId, int productTypeId)
     {
         var link = await _context.productToProductTypes
             .FirstOrDefaultAsync(item => item.ProductId == productId && item.ProductTypeId == productTypeId);
 
         if (link == null)
         {
-            return false;
+            return DeleteTypeFromProductStatus.NotFound;
+        }
+
+        var isUsedByOrderItems = await _context.orderItems
+            .AsNoTracking()
+            .AnyAsync(item => item.ProductToProductTypeID == link.ProductToProdutTypeID);
+
+        if (isUsedByOrderItems)
+        {
+            return DeleteTypeFromProductStatus.InUseByOrders;
         }
 
         _context.productToProductTypes.Remove(link);
         await _context.SaveChangesAsync();
-        return true;
+        return DeleteTypeFromProductStatus.Deleted;
     }
 
     // Tag: Update Type Link In Product

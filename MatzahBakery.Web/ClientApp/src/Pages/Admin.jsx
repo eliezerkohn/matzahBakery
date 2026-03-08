@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { sortTypesWithRegularFirst } from '../utils/sorters';
 
 const initialProductForm = {
     productName: '',
@@ -33,6 +34,8 @@ const Admin = () => {
     const [selectedGlobalTypeId, setSelectedGlobalTypeId] = useState('');
     const [isEditingGlobalType, setIsEditingGlobalType] = useState(false);
     const [editGlobalTypeName, setEditGlobalTypeName] = useState('');
+
+    const sortedGlobalTypes = sortTypesWithRegularFirst(globalTypes);
 
     const loadData = async () => {
         setLoading(true);
@@ -379,8 +382,8 @@ const Admin = () => {
                             <div className="mt-2 small text-muted">Type names are global. Price is set per product.</div>
                             <div className="mt-3">
                                 <h3 className="h6 mb-2">Global Types</h3>
-                                {!globalTypes.length && <div className="small text-muted">No global types yet.</div>}
-                                {!!globalTypes.length && (
+                                {!sortedGlobalTypes.length && <div className="small text-muted">No global types yet.</div>}
+                                {!!sortedGlobalTypes.length && (
                                     <div>
                                         <select
                                             className="form-select"
@@ -388,7 +391,7 @@ const Admin = () => {
                                             onChange={(event) => setSelectedGlobalTypeId(event.target.value)}
                                         >
                                             <option value="">Select global type</option>
-                                            {globalTypes.map((type) => (
+                                            {sortedGlobalTypes.map((type) => (
                                                 <option key={type.productTypeId} value={String(type.productTypeId)}>
                                                     {type.productTypeName}
                                                 </option>
@@ -538,7 +541,7 @@ const Admin = () => {
                                             }
                                         >
                                             <option value="">Select global type</option>
-                                            {globalTypes.map((type) => (
+                                            {sortedGlobalTypes.map((type) => (
                                                 <option key={type.productTypeId} value={type.productTypeId}>
                                                     {type.productTypeName}
                                                 </option>
@@ -563,8 +566,8 @@ const Admin = () => {
                                     </div>
                                 </form>
 
-                                {!(product.types || []).length && <div className="text-muted small">No types for this product.</div>}
-                                {(product.types || []).map((type) => (
+                                {!sortTypesWithRegularFirst(product.types || []).length && <div className="text-muted small">No types for this product.</div>}
+                                {sortTypesWithRegularFirst(product.types || []).map((type) => (
                                     <div
                                         key={type.productTypeId}
                                         className="d-flex justify-content-between align-items-center border rounded p-2 mb-2"
