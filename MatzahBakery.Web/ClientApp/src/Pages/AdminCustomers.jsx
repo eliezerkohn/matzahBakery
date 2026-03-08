@@ -119,7 +119,13 @@ const AdminCustomers = () => {
             return;
         }
 
-        navigate(`/admin/orders?customerId=${customerId}`);
+        const customerName = `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim();
+        const query = new URLSearchParams({ customerId: String(customerId) });
+        if (customerName) {
+            query.set('customerName', customerName);
+        }
+
+        navigate(`/admin/orders?${query.toString()}`);
     };
 
     const addOrderForCustomer = (customerId) => {

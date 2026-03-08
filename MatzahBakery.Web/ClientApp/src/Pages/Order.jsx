@@ -384,7 +384,18 @@ const Order = () => {
 
     const handleViewOrdersClick = () => {
         const customerId = getCustomerId();
-        navigate(customerId ? `/admin/orders?customerId=${customerId}` : '/admin/orders');
+        if (!customerId) {
+            navigate('/admin/orders');
+            return;
+        }
+
+        const customerName = `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim();
+        const query = new URLSearchParams({ customerId: String(customerId) });
+        if (customerName) {
+            query.set('customerName', customerName);
+        }
+
+        navigate(`/admin/orders?${query.toString()}`);
     };
 
     if (loading) {
@@ -394,10 +405,7 @@ const Order = () => {
     return (
         <div className="order-page container-fluid px-3 px-lg-4 py-4 py-lg-5">
             <div className="order-page__heading mb-4">
-                <h1 className="order-title mb-1">Build Order</h1>
-                {isEditingOrder && (
-                    <div className="small text-muted">Updating order #{editingOrderId}</div>
-                )}
+                <h1 className="order-title mb-1">{isEditingOrder ? `Updating order #${editingOrderId}` : 'Build Order'}</h1>
             </div>
 
             {!isCustomerComplete && !guestMode && (

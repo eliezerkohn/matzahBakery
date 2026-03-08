@@ -17,6 +17,7 @@ const AdminOrders = () => {
     const [dateSearch, setDateSearch] = useState('');
     const [customerFilter, setCustomerFilter] = useState(searchParams.get('customerId') || '');
     const [receiptOrder, setReceiptOrder] = useState(null);
+    const customerNameFromQuery = (searchParams.get('customerName') || '').trim();
 
     // Tag: Data loading
     const loadOrders = async () => {
@@ -132,6 +133,19 @@ const AdminOrders = () => {
         };
     };
 
+    const pageTitle = useMemo(() => {
+        if (!customerFilter) {
+            return 'All Orders';
+        }
+
+        if (customerNameFromQuery) {
+            return `${customerNameFromQuery} Orders`;
+        }
+
+        const fallbackName = orders.find((order) => String(order.customerId) === String(customerFilter))?.customerName;
+        return fallbackName ? `${fallbackName} Orders` : 'Customer Orders';
+    }, [customerFilter, customerNameFromQuery, orders]);
+
     if (loading) {
         return <div className="container py-5">Loading orders...</div>;
     }
@@ -139,7 +153,7 @@ const AdminOrders = () => {
     return (
         <div className="container py-5">
             {/* Tag: Page Title */}
-            <h1 className="order-title mb-4">All Orders</h1>
+            <h1 className="order-title mb-4">{pageTitle}</h1>
 
             {/* Tag: Filters Section */}
             <AdminOrdersFilters
