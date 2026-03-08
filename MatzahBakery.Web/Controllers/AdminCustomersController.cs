@@ -1,6 +1,6 @@
 using MatzahBakery.Data;
+using MatzahBakery.Data.Repositories.Contracts;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace MatzahBakery.Web.Controllers
 {
@@ -8,22 +8,17 @@ namespace MatzahBakery.Web.Controllers
     [ApiController]
     public class AdminCustomersController : ControllerBase
     {
-        private readonly MatzahBakeryDataContext _context;
+        private readonly AdminCustomersRepository _repository;
 
-        public AdminCustomersController(MatzahBakeryDataContext context)
+        public AdminCustomersController(AdminCustomersRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Customer>>> GetAll()
         {
-            var customers = await _context.customers
-                .AsNoTracking()
-                .OrderBy(c => c.FirstName)
-                .ThenBy(c => c.LastName)
-                .ThenBy(c => c.Id)
-                .ToListAsync();
+            var customers = await _repository.GetAllAdminCustomersAsync();
 
             return Ok(customers);
         }
@@ -36,43 +31,41 @@ namespace MatzahBakery.Web.Controllers
                 return BadRequest(new { message = "Request is required." });
             }
 
-            var customer = await _context.customers.FirstOrDefaultAsync(c => c.Id == id);
-            if (customer == null)
+            var updated = await _repository.UpdateCustomerAsync(id, new AdminCustomerUpdateData
+            {
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Email = request.Email,
+                PhoneNumber = request.PhoneNumber,
+                Address = request.Address,
+                Apartment = request.Apartment,
+                City = request.City,
+                State = request.State,
+                ZipCode = request.ZipCode
+            });
+
+            if (!updated)
             {
                 return NotFound(new { message = "Customer not found." });
             }
-
-            customer.FirstName = (request.FirstName ?? string.Empty).Trim();
-            customer.LastName = (request.LastName ?? string.Empty).Trim();
-            customer.Email = (request.Email ?? string.Empty).Trim();
-            customer.PhoneNumber = (request.PhoneNumber ?? string.Empty).Trim();
-            customer.Address = (request.Address ?? string.Empty).Trim();
-            customer.Apartment = (request.Apartment ?? string.Empty).Trim();
-            customer.City = (request.City ?? string.Empty).Trim();
-            customer.State = (request.State ?? string.Empty).Trim();
-            customer.ZipCode = (request.ZipCode ?? string.Empty).Trim();
-
-            await _context.SaveChangesAsync();
             return Ok(new { message = "Customer updated." });
         }
 
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
-            var customer = await _context.customers.FirstOrDefaultAsync(c => c.Id == id);
-            if (customer == null)
+            var result = await _repository.DeleteCustomerAsync(id);
+
+            if (result == DeleteCustomerStatus.NotFound)
             {
                 return NotFound(new { message = "Customer not found." });
             }
 
-            var hasOrders = await _context.orders.AnyAsync(order => order.CustomerId == id);
-            if (hasOrders)
+            if (result == DeleteCustomerStatus.HasOrders)
             {
                 return BadRequest(new { message = "Cannot delete customer with existing orders." });
             }
 
-            _context.customers.Remove(customer);
-            await _context.SaveChangesAsync();
             return Ok(new { message = "Customer deleted." });
         }
 

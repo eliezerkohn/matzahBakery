@@ -7,31 +7,24 @@ namespace MatzahBakery.Web.Controllers
     [ApiController]
     public class customersController : ControllerBase
     {
-        private readonly string _connectionString;
+        private readonly CustomersRepository _repository;
 
-        public customersController(IConfiguration configuration)
+        public customersController(CustomersRepository repository)
         {
-            _connectionString = configuration.GetConnectionString("ConStr");
-        }
-
-        private MatzahBakeryRepository CreateRepository()
-        {
-            return new MatzahBakeryRepository(_connectionString);
+            _repository = repository;
         }
 
         [HttpGet]
         [Route("varify")]
         public Customer VarifyByPhone(string phone)
         {
-            var repository = CreateRepository();
-            return repository.VarifyByPhone(phone);
+            return _repository.VarifyByPhone(phone);
         }
 
         [HttpGet("{id}")]
         public ActionResult<Customer> GetCustomerById(int id)
         {
-            var context = new MatzahBakeryDataContext(_connectionString);
-            var customer = context.customers.FirstOrDefault(item => item.Id == id);
+            var customer = _repository.GetCustomerById(id);
 
             if (customer == null)
             {
@@ -45,8 +38,7 @@ namespace MatzahBakery.Web.Controllers
         [Route("add")]
         public Customer AddCustomer(Customer customer)
         {
-            var repository = CreateRepository();
-            return repository.AddCustomer(customer);
+            return _repository.AddCustomer(customer);
         }
     }
 }

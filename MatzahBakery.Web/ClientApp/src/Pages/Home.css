@@ -12,7 +12,6 @@ body,
 
 .app-shell {
   position: relative;
-  overflow: hidden;
   min-height: 100vh;
   background-color: var(--bakery-brown);
   isolation: isolate;
@@ -139,11 +138,6 @@ body,
   color: #6b5640;
 }
 
-.order-receipt-card {
-  position: sticky;
-  top: 82px;
-}
-
 .receipt-meta {
   display: grid;
   gap: 0.2rem;
@@ -220,5 +214,18 @@ body,
   .order-layout-grid {
     grid-template-columns: minmax(0, 1fr) 360px;
     align-items: start;
+  }
+
+  .order-receipt-column {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 82px;
+    align-self: start;
+  }
+
+  .order-receipt-card {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 132px;
   }
 }

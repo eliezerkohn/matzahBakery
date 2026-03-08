@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import OrderProductCard from '../components/order/OrderProductCard';
+import OrderReceiptPanel from '../components/order/OrderReceiptPanel';
+import GuestLoginModal from '../components/order/GuestLoginModal';
+import OrderSuccessModal from '../components/order/OrderSuccessModal';
+import { formatCurrency } from '../utils/formatters';
+import { DELIVERY_FEE, TAX_RATE } from '../utils/constants';
 
-const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
 const getLineKey = (productId, productTypeId) => `${productId}:${productTypeId}`;
-const DELIVERY_FEE = 25;
-const TAX_RATE = 0.08875;
 const requiredCustomerFields = ['firstName', 'lastName', 'email', 'phoneNumber', 'address', 'city', 'state', 'zipCode'];
 
 const emptyGuestRegistrationForm = {
@@ -21,12 +24,16 @@ const emptyGuestRegistrationForm = {
 };
 
 const Order = () => {
+    // Tag: Navigation and route context
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams] = useSearchParams();
     const prefillOrder = location.state?.prefillOrder || null;
+    const editingOrderId = Number(prefillOrder?.orderId) || 0;
+    const isEditingOrder = editingOrderId > 0;
     const guestMode = searchParams.get('guest') === '1' || Boolean(location.state?.guestMode);
 
+    // Tag: Page state
     const [customer, setCustomer] = useState(location.state?.customer || null);
     const [catalog, setCatalog] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -39,6 +46,8 @@ const Order = () => {
     const [submitState, setSubmitState] = useState({ loading: false, message: '', isError: false });
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [submittedOrderId, setSubmittedOrderId] = useState(null);
+
+    // Tag: Guest auth modal state
     const [showGuestLoginPopup, setShowGuestLoginPopup] = useState(false);
     const [guestPhoneNumber, setGuestPhoneNumber] = useState('');
     const [guestNeedsRegistration, setGuestNeedsRegistration] = useState(false);
@@ -59,6 +68,7 @@ const Order = () => {
     const getCustomerId = () => getCustomerIdFrom(customer);
     const getCustomerAddress = () => buildCustomerAddress(customer);
 
+    // Tag: Initial data and prefill
     useEffect(() => {
         const loadPageData = async () => {
             setLoading(true);
@@ -124,6 +134,7 @@ const Order = () => {
         loadPageData();
     }, [searchParams, prefillOrder]);
 
+    // Tag: Derived values
     const isCustomerComplete = useMemo(
         () => requiredCustomerFields.every((field) => Boolean(String(customer?.[field] || '').trim())),
         [customer]
@@ -134,14 +145,7 @@ const Order = () => {
         [guestRegistrationForm]
     );
 
-    const updateTypeQuantity = (productId, productTypeId, value) => {
-        const key = getLineKey(productId, productTypeId);
-        const parsedQuantity = Math.max(0, Number(value) || 0);
-        setTypeQuantities((prev) => ({
-            ...prev,
-            [key]: parsedQuantity
-        }));
-    };
+    const canShowViewOrders = !guestMode || isCustomerComplete;
 
     const selectedLines = useMemo(() => {
         const lines = [];
@@ -174,13 +178,24 @@ const Order = () => {
 
     const subTotal = useMemo(() => selectedLines.reduce((sum, line) => sum + line.lineTotal, 0), [selectedLines]);
     const deliveryFee = fulfillmentType === 'delivery' ? DELIVERY_FEE : 0;
-    const taxAmount = subTotal * TAX_RATE;
-    const orderTotal = subTotal + taxAmount + deliveryFee;
+    const taxableAmount = subTotal + deliveryFee;
+    const taxAmount = taxableAmount * TAX_RATE;
+    const orderTotal = taxableAmount + taxAmount;
     const deliveryAddressForOrder = useAccountAddress ? getCustomerAddress() : customDeliveryAddress.trim();
     const totalItemCount = useMemo(
         () => selectedLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
         [selectedLines]
     );
+
+    // Tag: Actions
+    const updateTypeQuantity = (productId, productTypeId, value) => {
+        const key = getLineKey(productId, productTypeId);
+        const parsedQuantity = Math.max(0, Number(value) || 0);
+        setTypeQuantities((prev) => ({
+            ...prev,
+            [key]: parsedQuantity
+        }));
+    };
 
     const resetOrderInputs = () => {
         const resetQuantities = {};
@@ -247,14 +262,22 @@ const Order = () => {
         };
 
         try {
-            const response = await axios.post('/api/orders', payload);
-            setSubmittedOrderId(response?.data?.orderId ?? null);
+            if (editingOrderId > 0) {
+                await axios.put(`/api/orders/${editingOrderId}`, payload);
+                setSubmittedOrderId(editingOrderId);
+            } else {
+                const response = await axios.post('/api/orders', payload);
+                setSubmittedOrderId(response?.data?.orderId ?? null);
+            }
+
             setShowSuccessPopup(true);
             setSubmitState({ loading: false, message: '', isError: false });
         } catch {
             setSubmitState({
                 loading: false,
-                message: 'Could not submit order to backend API.',
+                message: editingOrderId > 0
+                    ? 'Could not update order in backend API.'
+                    : 'Could not submit order to backend API.',
                 isError: true
             });
         }
@@ -359,6 +382,11 @@ const Order = () => {
         }
     };
 
+    const handleViewOrdersClick = () => {
+        const customerId = getCustomerId();
+        navigate(customerId ? `/admin/orders?customerId=${customerId}` : '/admin/orders');
+    };
+
     if (loading) {
         return <div className="container py-5">Loading order page...</div>;
     }
@@ -367,13 +395,14 @@ const Order = () => {
         <div className="order-page container-fluid px-3 px-lg-4 py-4 py-lg-5">
             <div className="order-page__heading mb-4">
                 <h1 className="order-title mb-1">Build Order</h1>
+                {isEditingOrder && (
+                    <div className="small text-muted">Updating order #{editingOrderId}</div>
+                )}
             </div>
 
-            {!isCustomerComplete && (
+            {!isCustomerComplete && !guestMode && (
                 <div className="alert alert-warning">
-                    {guestMode
-                        ? 'Guest checkout enabled. Submit your order to log in or create an account.'
-                        : 'Customer information is missing. Go back to Home and complete customer details first.'}
+                    {'Customer information is missing. Go back to Home and complete customer details first.'}
                 </div>
             )}
 
@@ -381,19 +410,19 @@ const Order = () => {
                 <div className="order-builder-column">
                     {customer && (
                         <div className="card order-card mb-4">
-                                                        <div className="card-body py-2 px-3 customer-summary">
-                                                                <div className="customer-summary__title">Customer</div>
-                                                                <div className="customer-summary__line">
-                                                                        {`${customer.firstName || ''} ${customer.lastName || ''}`.trim() || '-'}
-                                                                        {' • '}
-                                                                        {customer.phoneNumber || '-'}
-                                                                        {' • '}
-                                                                        {customer.email || '-'}
-                                                                </div>
-                                                                <div className="customer-summary__line customer-summary__address">
-                                                                        {getCustomerAddress() || '-'}
-                                                                </div>
-                                                        </div>
+                            <div className="card-body py-2 px-3 customer-summary">
+                                <div className="customer-summary__title">Customer</div>
+                                <div className="customer-summary__line">
+                                    {`${customer.firstName || ''} ${customer.lastName || ''}`.trim() || '-'}
+                                    {' | '}
+                                    {customer.phoneNumber || '-'}
+                                    {' | '}
+                                    {customer.email || '-'}
+                                </div>
+                                <div className="customer-summary__line customer-summary__address">
+                                    {getCustomerAddress() || '-'}
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -452,78 +481,25 @@ const Order = () => {
                             </div>
                         </div>
 
-                        {catalog.map((product) => {
-                            const productBasePrice = Number(product.productPrice) || 0;
-
-                            return (
-                                <div key={product.productId} className="card order-card">
-                                    <div className="card-body">
-                                        <div className="d-flex justify-content-between flex-wrap gap-2 mb-3">
-                                            <div>
-                                                <div className="fw-semibold">{product.productName || 'Product'}</div>
-                                                <div className="small text-muted">Base price: {formatCurrency(productBasePrice)}</div>
-                                            </div>
-                                        </div>
-
-                                        {!(product.types || []).length && (
-                                            <div className="text-muted">No types available for this product.</div>
-                                        )}
-
-                                        {!!(product.types || []).length && (
-                                            <div className="table-responsive">
-                                                <table className="table table-sm align-middle mb-0 order-types-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Type</th>
-                                                            <th>Type Price</th>
-                                                            <th>Unit Price</th>
-                                                            <th style={{ maxWidth: '110px' }}>Qty</th>
-                                                            <th>Line Total</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {(product.types || []).map((type) => {
-                                                            const key = getLineKey(product.productId, type.productTypeId);
-                                                            const quantity = Number(typeQuantities[key]) || 0;
-                                                            const typePrice = Number(type.typePrice) || 0;
-                                                            const unitPrice = productBasePrice + typePrice;
-                                                            const lineTotal = unitPrice * quantity;
-
-                                                            return (
-                                                                <tr key={key}>
-                                                                    <td>{type.productTypeName || '-'}</td>
-                                                                    <td>{formatCurrency(typePrice)}</td>
-                                                                    <td>{formatCurrency(unitPrice)}</td>
-                                                                    <td>
-                                                                        <input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            className="form-control form-control-sm"
-                                                                            value={quantity}
-                                                                            onChange={(event) =>
-                                                                                updateTypeQuantity(product.productId, type.productTypeId, event.target.value)
-                                                                            }
-                                                                        />
-                                                                    </td>
-                                                                    <td>{formatCurrency(lineTotal)}</td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                        {catalog.map((product) => (
+                            <OrderProductCard
+                                key={product.productId}
+                                product={product}
+                                typeQuantities={typeQuantities}
+                                getLineKey={getLineKey}
+                                updateTypeQuantity={updateTypeQuantity}
+                                formatCurrency={formatCurrency}
+                            />
+                        ))}
 
                         <div className="d-flex gap-2 align-items-center">
                             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/')}>
                                 Back Home
                             </button>
                             <button type="submit" className="btn btn-dark" disabled={submitState.loading || !catalog.length}>
-                                {submitState.loading ? 'Submitting...' : 'Submit Order'}
+                                {submitState.loading
+                                    ? (isEditingOrder ? 'Updating...' : 'Submitting...')
+                                    : (isEditingOrder ? 'Update Order' : 'Submit Order')}
                             </button>
                             {submitState.message && (
                                 <span className={submitState.isError ? 'text-danger' : 'text-success'}>{submitState.message}</span>
@@ -532,245 +508,55 @@ const Order = () => {
                     </form>
                 </div>
 
-                <aside className="order-receipt-column">
-                    <div className="card order-card order-view-orders-card mb-2">
-                        <div className="card-body order-view-orders-body d-flex justify-content-between align-items-center gap-2">
-                            <div className="text-muted order-view-orders-text">Need past orders?</div>
-                            <button
-                                type="button"
-                                className="btn btn-sm btn-outline-dark order-view-orders-btn"
-                                onClick={() => {
-                                    const customerId = getCustomerId();
-                                    navigate(customerId ? `/admin/orders?customerId=${customerId}` : '/admin/orders');
-                                }}
-                            >
-                                View Orders
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="card order-receipt-card">
-                        <div className="card-body">
-                            <h2 className="h5 mb-1">Receipt</h2>
-                            <small className="text-muted" style={{ display: "block", marginBottom: "10px" }}>Review your order details here as you build.</small>
-
-                            <div className="receipt-meta mb-3">
-                                <div><strong>Type:</strong> {fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}</div>
-                                <div><strong>Date:</strong> {fulfillmentDate || '-'}</div>
-                                <div><strong>Customer:</strong> {(customer?.firstName || '-') + ' ' + (customer?.lastName || '')}</div>
-                                <div><strong>Items:</strong> {totalItemCount}</div>
-                                {fulfillmentType === 'delivery' && (
-                                    <div><strong>Deliver To:</strong> {deliveryAddressForOrder || '-'}</div>
-                                )}
-                            </div>
-
-                            {!selectedLines.length && (
-                                <div className="receipt-empty">No items selected yet.</div>
-                            )}
-
-                            {!!selectedLines.length && (
-                                <div className="receipt-lines">
-                                    {selectedLines.map((line) => (
-                                        <div key={getLineKey(line.productId, line.productTypeId)} className="receipt-line">
-                                            <div className="receipt-line__name">{line.productName} - {line.productTypeName}</div>
-                                            <div className="receipt-line__details">
-                                                <span>{line.quantity} x {formatCurrency(line.unitPrice)}</span>
-                                                <strong>{formatCurrency(line.lineTotal)}</strong>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="receipt-total mt-3 pt-3">
-                                <span>Subtotal</span>
-                                <strong>{formatCurrency(subTotal)}</strong>
-                            </div>
-
-                            <div className="receipt-total mt-2 pt-2">
-                                <span>Tax (8.875%)</span>
-                                <strong>{formatCurrency(taxAmount)}</strong>
-                            </div>
-
-                            {deliveryFee > 0 && (
-                                <div className="receipt-total mt-2 pt-2">
-                                    <span>Delivery Fee</span>
-                                    <strong>{formatCurrency(deliveryFee)}</strong>
-                                </div>
-                            )}
-
-                            <div className="receipt-total mt-2 pt-2">
-                                <span>Grand Total</span>
-                                <strong>{formatCurrency(orderTotal)}</strong>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
+                <OrderReceiptPanel
+                    canShowViewOrders={canShowViewOrders}
+                    onViewOrders={handleViewOrdersClick}
+                    fulfillmentType={fulfillmentType}
+                    fulfillmentDate={fulfillmentDate}
+                    customer={customer}
+                    totalItemCount={totalItemCount}
+                    deliveryAddressForOrder={deliveryAddressForOrder}
+                    selectedLines={selectedLines}
+                    getLineKey={getLineKey}
+                    formatCurrency={formatCurrency}
+                    subTotal={subTotal}
+                    deliveryFee={deliveryFee}
+                    taxAmount={taxAmount}
+                    orderTotal={orderTotal}
+                />
             </div>
 
-            {showGuestLoginPopup && (
-                <div className="order-success-overlay" role="dialog" aria-modal="true" aria-label="Log in to submit order">
-                    <div className="order-success-modal">
-                        <h2 className="h5 mb-2">Log In To Submit Order</h2>
-                        <p className="mb-3">Enter your phone number to find your account, or create a new one.</p>
+            <GuestLoginModal
+                show={showGuestLoginPopup}
+                guestNeedsRegistration={guestNeedsRegistration}
+                guestPhoneNumber={guestPhoneNumber}
+                onPhoneChange={setGuestPhoneNumber}
+                onFindAccount={handleGuestPhoneLookup}
+                guestAuthLoading={guestAuthLoading}
+                guestRegistrationForm={guestRegistrationForm}
+                onRegistrationChange={handleGuestRegistrationChange}
+                guestAuthMessage={guestAuthMessage}
+                onClose={() => {
+                    setShowGuestLoginPopup(false);
+                    setGuestNeedsRegistration(false);
+                    setGuestAuthMessage('');
+                }}
+                onCreateAccount={handleCreateGuestAccount}
+            />
 
-                        <div className="mb-3">
-                            <label className="form-label">Phone Number</label>
-                            <input
-                                className="form-control"
-                                value={guestPhoneNumber}
-                                onChange={(event) => setGuestPhoneNumber(event.target.value.replace(/\D/g, ''))}
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                            />
-                        </div>
-
-                        {!guestNeedsRegistration && (
-                            <div className="mb-3 d-flex gap-2 justify-content-end">
-                                <button
-                                    type="button"
-                                    className="btn btn-dark"
-                                    onClick={handleGuestPhoneLookup}
-                                    disabled={guestAuthLoading}
-                                >
-                                    {guestAuthLoading ? 'Checking...' : 'Find Account'}
-                                </button>
-                            </div>
-                        )}
-
-                        {guestNeedsRegistration && (
-                            <div className="row g-2 mb-3">
-                                <div className="col-12 col-md-6">
-                                    <input
-                                        className="form-control"
-                                        name="firstName"
-                                        placeholder="First Name"
-                                        value={guestRegistrationForm.firstName}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                                <div className="col-12 col-md-6">
-                                    <input
-                                        className="form-control"
-                                        name="lastName"
-                                        placeholder="Last Name"
-                                        value={guestRegistrationForm.lastName}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                                <div className="col-12">
-                                    <input
-                                        type="email"
-                                        className="form-control"
-                                        name="email"
-                                        placeholder="Email"
-                                        value={guestRegistrationForm.email}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                                <div className="col-12">
-                                    <input
-                                        className="form-control"
-                                        name="address"
-                                        placeholder="Address"
-                                        value={guestRegistrationForm.address}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                                <div className="col-12 col-md-4">
-                                    <input
-                                        className="form-control"
-                                        name="apartment"
-                                        placeholder="Apartment (Optional)"
-                                        value={guestRegistrationForm.apartment}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                                <div className="col-12 col-md-3">
-                                    <input
-                                        className="form-control"
-                                        name="city"
-                                        placeholder="City"
-                                        value={guestRegistrationForm.city}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                                <div className="col-12 col-md-3">
-                                    <input
-                                        className="form-control"
-                                        name="state"
-                                        placeholder="State"
-                                        value={guestRegistrationForm.state}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                                <div className="col-12 col-md-2">
-                                    <input
-                                        className="form-control"
-                                        name="zipCode"
-                                        placeholder="Zip"
-                                        value={guestRegistrationForm.zipCode}
-                                        onChange={handleGuestRegistrationChange}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {guestAuthMessage && <div className="text-danger mb-3">{guestAuthMessage}</div>}
-
-                        <div className="d-flex gap-2 justify-content-end">
-                            <button
-                                type="button"
-                                className="btn btn-outline-secondary"
-                                onClick={() => {
-                                    setShowGuestLoginPopup(false);
-                                    setGuestNeedsRegistration(false);
-                                    setGuestAuthMessage('');
-                                }}
-                            >
-                                Close
-                            </button>
-                            {guestNeedsRegistration && (
-                                <button
-                                    type="button"
-                                    className="btn btn-dark"
-                                    onClick={handleCreateGuestAccount}
-                                    disabled={guestAuthLoading}
-                                >
-                                    {guestAuthLoading ? 'Creating...' : 'Create Account & Submit'}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showSuccessPopup && (
-                <div className="order-success-overlay" role="dialog" aria-modal="true" aria-label="Order submitted">
-                    <div className="order-success-modal">
-                        <h2 className="h5 mb-2">Order Received</h2>
-                        <p className="mb-2">We got the order and we will send you a receipt by email. Thank you.</p>
-                        {submittedOrderId && <div className="small text-muted mb-3">Order #{submittedOrderId}</div>}
-                        <div className="d-flex gap-2 justify-content-end">
-                            <button
-                                type="button"
-                                className="btn btn-outline-secondary"
-                                onClick={() => {
-                                    setShowSuccessPopup(false);
-                                    resetOrderInputs();
-                                }}
-                            >
-                                Close
-                            </button>
-                            <button type="button" className="btn btn-dark" onClick={() => navigate('/')}>
-                                Back Home
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <OrderSuccessModal
+                show={showSuccessPopup}
+                isEditingOrder={isEditingOrder}
+                submittedOrderId={submittedOrderId}
+                onClose={() => {
+                    setShowSuccessPopup(false);
+                    resetOrderInputs();
+                }}
+                onBackHome={() => navigate('/')}
+            />
         </div>
     );
 };
 
 export default Order;
+

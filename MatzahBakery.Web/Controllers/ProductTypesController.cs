@@ -1,6 +1,5 @@
 using MatzahBakery.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace MatzahBakery.Web.Controllers
 {
@@ -8,20 +7,17 @@ namespace MatzahBakery.Web.Controllers
     [ApiController]
     public class ProductTypesController : ControllerBase
     {
-        private readonly MatzahBakeryDataContext _context;
+        private readonly ProductTypesRepository _repository;
 
-        public ProductTypesController(MatzahBakeryDataContext context)
+        public ProductTypesController(ProductTypesRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductTypeDto>>> GetAll()
         {
-            var types = await _context.productTypes
-                .AsNoTracking()
-                .OrderBy(type => type.ProductTypeId)
-                .ToListAsync();
+            var types = await _repository.GetAllProductTypesAsync();
 
             return Ok(types.Select(ToDto));
         }
@@ -34,13 +30,7 @@ namespace MatzahBakery.Web.Controllers
                 return BadRequest(new { message = "productTypeName is required." });
             }
 
-            var type = new ProductType
-            {
-                TypeName = request.ProductTypeName.Trim()
-            };
-
-            _context.productTypes.Add(type);
-            await _context.SaveChangesAsync();
+            var type = await _repository.CreateProductTypeAsync(request.ProductTypeName.Trim());
 
             return CreatedAtAction(nameof(GetAll), new ProductTypeDto
             {
@@ -53,19 +43,11 @@ namespace MatzahBakery.Web.Controllers
         [HttpDelete("{productTypeId}")]
         public async Task<IActionResult> Delete(int productTypeId)
         {
-            var type = await _context.productTypes.FirstOrDefaultAsync(item => item.ProductTypeId == productTypeId);
-            if (type == null)
+            var deleted = await _repository.DeleteProductTypeAsync(productTypeId);
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            var links = await _context.productToProductTypes
-                .Where(link => link.ProductTypeId == productTypeId)
-                .ToListAsync();
-
-            _context.productToProductTypes.RemoveRange(links);
-            _context.productTypes.Remove(type);
-            await _context.SaveChangesAsync();
             return NoContent();
         }
 
@@ -77,14 +59,11 @@ namespace MatzahBakery.Web.Controllers
                 return BadRequest(new { message = "productTypeName is required." });
             }
 
-            var type = await _context.productTypes.FirstOrDefaultAsync(item => item.ProductTypeId == productTypeId);
+            var type = await _repository.UpdateProductTypeAsync(productTypeId, request.ProductTypeName.Trim());
             if (type == null)
             {
                 return NotFound();
             }
-
-            type.TypeName = request.ProductTypeName.Trim();
-            await _context.SaveChangesAsync();
 
             return Ok(ToDto(type));
         }
@@ -107,7 +86,6 @@ namespace MatzahBakery.Web.Controllers
         public class UpdateProductTypeRequest
         {
             public string ProductTypeName { get; set; } = string.Empty;
-            public decimal TypePrice { get; set; }
         }
 
         public class ProductTypeDto

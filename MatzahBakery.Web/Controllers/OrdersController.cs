@@ -1,6 +1,6 @@
 using MatzahBakery.Data;
+using MatzahBakery.Data.Repositories.Contracts;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace MatzahBakery.Web.Controllers
 {
@@ -8,23 +8,19 @@ namespace MatzahBakery.Web.Controllers
     [ApiController]
     public class OrdersController : ControllerBase
     {
-        private readonly MatzahBakeryDataContext _context;
+        private readonly OrdersRepository _repository;
         private const decimal DeliveryFee = 25m;
+        private const decimal TaxRate = 0.08875m;
 
-        public OrdersController(MatzahBakeryDataContext context)
+        public OrdersController(OrdersRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<OrderDto>>> GetAll()
         {
-            var orders = await _context.orders
-                .AsNoTracking()
-                .Include(order => order.Customer)
-                .OrderByDescending(order => order.OrderDate)
-                .ThenByDescending(order => order.OrderId)
-                .ToListAsync();
+            var orders = await _repository.GetAllOrdersWithCustomerAsync();
 
             if (!orders.Any())
             {
@@ -32,22 +28,14 @@ namespace MatzahBakery.Web.Controllers
             }
 
             var orderIds = orders.Select(order => order.OrderId).ToList();
-            var orderItems = await _context.orderItems
-                .AsNoTracking()
-                .Where(item => orderIds.Contains(item.OrderID))
-                .ToListAsync();
+            var orderItems = await _repository.GetOrderItemsByOrderIdsAsync(orderIds);
 
             var productTypeLinkIds = orderItems
                 .Select(item => item.ProductToProductTypeID)
                 .Distinct()
                 .ToList();
 
-            var productTypeLinks = await _context.productToProductTypes
-                .AsNoTracking()
-                .Include(link => link.Product)
-                .Include(link => link.ProductType)
-                .Where(link => productTypeLinkIds.Contains(link.ProductToProdutTypeID))
-                .ToListAsync();
+            var productTypeLinks = await _repository.GetProductTypeLinksByIdsAsync(productTypeLinkIds);
 
             var linkLookup = productTypeLinks
                 .GroupBy(link => link.ProductToProdutTypeID)
@@ -96,7 +84,7 @@ namespace MatzahBakery.Web.Controllers
                     ItemCount = lines.Sum(line => line.Quantity),
                     SubTotal = lines.Sum(line => line.LineTotal),
                     DeliveryFee = order.IsDelivery ? DeliveryFee : 0,
-                    OrderTotal = lines.Sum(line => line.LineTotal) + (order.IsDelivery ? DeliveryFee : 0),
+                    OrderTotal = CalculateOrderTotal(lines.Sum(line => line.LineTotal), order.IsDelivery),
                     Items = lines
                 };
             }).ToList();
@@ -117,70 +105,39 @@ namespace MatzahBakery.Web.Controllers
                 return BadRequest(new { message = "At least one order line is required." });
             }
 
-            var customer = await _context.customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId);
-            if (customer == null)
+            var result = await _repository.CreateOrderAsync(new CreateOrUpdateOrderData
+            {
+                OrderDate = request.OrderDate,
+                CustomerId = request.CustomerId,
+                FulfillmentType = request.FulfillmentType,
+                DeliveryAddress = request.DeliveryAddress,
+                OrderLines = request.OrderLines.Select(line => new OrderLineData
+                {
+                    ProductId = line.ProductId,
+                    ProductTypeId = line.ProductTypeId,
+                    Quantity = line.Quantity
+                }).ToList()
+            });
+
+            if (result.Status == SaveOrderStatus.CustomerNotFound)
             {
                 return BadRequest(new { message = "Customer does not exist." });
             }
 
-            var isDelivery = string.Equals(request.FulfillmentType, "delivery", StringComparison.OrdinalIgnoreCase);
-            var customerAddress = BuildCustomerAddress(customer);
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
-            var order = new Order
-            {
-                OrderDate = request.OrderDate ?? DateTime.UtcNow,
-                CustomerId = request.CustomerId,
-                IsDelivery = isDelivery,
-                DeliveryDate = request.OrderDate ?? DateTime.UtcNow,
-                DeliveryAddress = isDelivery
-                    ? (!string.IsNullOrWhiteSpace(request.DeliveryAddress) ? request.DeliveryAddress.Trim() : customerAddress)
-                    : string.Empty
-            };
-
-            _context.orders.Add(order);
-            await _context.SaveChangesAsync();
-
-            var normalizedLines = request.OrderLines
-                .Where(line => line.Quantity > 0)
-                .ToList();
-
-            if (!normalizedLines.Any())
+            if (result.Status == SaveOrderStatus.NoValidLines)
             {
                 return BadRequest(new { message = "At least one order line must have quantity greater than 0." });
             }
 
-            var orderItems = new List<OrderItems>();
-            foreach (var line in normalizedLines)
+            if (result.Status == SaveOrderStatus.InvalidProductTypeCombination)
             {
-                var productTypeLink = await _context.productToProductTypes
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(link =>
-                        link.ProductId == line.ProductId &&
-                        link.ProductTypeId == line.ProductTypeId);
-
-                if (productTypeLink == null)
+                return BadRequest(new
                 {
-                    return BadRequest(new
-                    {
-                        message = $"Invalid product/type combination for productId={line.ProductId}, productTypeId={line.ProductTypeId}."
-                    });
-                }
-
-                orderItems.Add(new OrderItems
-                {
-                    OrderID = order.OrderId,
-                    ProductToProductTypeID = productTypeLink.ProductToProdutTypeID,
-                    Quantity = line.Quantity
+                    message = $"Invalid product/type combination for productId={result.InvalidProductId}, productTypeId={result.InvalidProductTypeId}."
                 });
             }
 
-            _context.orderItems.AddRange(orderItems);
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            return Ok(new { orderId = order.OrderId, orderItemsCreated = orderItems.Count });
+            return Ok(new { orderId = result.OrderId, orderItemsCreated = result.ItemsAffected });
         }
 
         [HttpPut("{orderId}")]
@@ -191,49 +148,59 @@ namespace MatzahBakery.Web.Controllers
                 return BadRequest(new { message = "customerId is required." });
             }
 
-            var order = await _context.orders.FirstOrDefaultAsync(item => item.OrderId == orderId);
-            if (order == null)
+            if (request.OrderLines == null || !request.OrderLines.Any())
+            {
+                return BadRequest(new { message = "At least one order line is required." });
+            }
+
+            var result = await _repository.UpdateOrderAsync(orderId, new CreateOrUpdateOrderData
+            {
+                OrderDate = request.OrderDate,
+                CustomerId = request.CustomerId,
+                FulfillmentType = request.FulfillmentType,
+                DeliveryAddress = request.DeliveryAddress,
+                OrderLines = request.OrderLines.Select(line => new OrderLineData
+                {
+                    ProductId = line.ProductId,
+                    ProductTypeId = line.ProductTypeId,
+                    Quantity = line.Quantity
+                }).ToList()
+            });
+
+            if (result.Status == SaveOrderStatus.OrderNotFound)
             {
                 return NotFound(new { message = "Order not found." });
             }
 
-            var customer = await _context.customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId);
-            if (customer == null)
+            if (result.Status == SaveOrderStatus.CustomerNotFound)
             {
                 return BadRequest(new { message = "Customer does not exist." });
             }
 
-            var isDelivery = string.Equals(request.FulfillmentType, "delivery", StringComparison.OrdinalIgnoreCase);
-            var customerAddress = BuildCustomerAddress(customer);
+            if (result.Status == SaveOrderStatus.NoValidLines)
+            {
+                return BadRequest(new { message = "At least one order line must have quantity greater than 0." });
+            }
 
-            order.OrderDate = request.OrderDate ?? order.OrderDate;
-            order.IsDelivery = isDelivery;
-            order.DeliveryDate = request.OrderDate ?? order.DeliveryDate;
-            order.DeliveryAddress = isDelivery
-                ? (!string.IsNullOrWhiteSpace(request.DeliveryAddress) ? request.DeliveryAddress.Trim() : customerAddress)
-                : string.Empty;
-            order.CustomerId = request.CustomerId;
-            await _context.SaveChangesAsync();
+            if (result.Status == SaveOrderStatus.InvalidProductTypeCombination)
+            {
+                return BadRequest(new
+                {
+                    message = $"Invalid product/type combination for productId={result.InvalidProductId}, productTypeId={result.InvalidProductTypeId}."
+                });
+            }
 
-            return Ok(new { message = "Order updated." });
+            return Ok(new { message = "Order updated.", orderId = result.OrderId, orderItemsUpdated = result.ItemsAffected });
         }
 
         [HttpDelete("{orderId}")]
         public async Task<ActionResult> Delete(int orderId)
         {
-            var order = await _context.orders.FirstOrDefaultAsync(item => item.OrderId == orderId);
-            if (order == null)
+            var deleted = await _repository.DeleteOrderAsync(orderId);
+            if (!deleted)
             {
                 return NotFound(new { message = "Order not found." });
             }
-
-            var relatedItems = await _context.orderItems
-                .Where(item => item.OrderID == orderId)
-                .ToListAsync();
-
-            _context.orderItems.RemoveRange(relatedItems);
-            _context.orders.Remove(order);
-            await _context.SaveChangesAsync();
 
             return Ok(new { message = "Order deleted." });
         }
@@ -246,34 +213,27 @@ namespace MatzahBakery.Web.Controllers
                 return BadRequest(new { message = "quantity must be greater than 0." });
             }
 
-            var orderExists = await _context.orders.AnyAsync(item => item.OrderId == orderId);
-            if (!orderExists)
+            var result = await _repository.UpdateOrderItemQuantityAsync(orderId, orderItemId, request.Quantity);
+
+            if (result == UpdateOrderItemStatus.OrderNotFound)
             {
                 return NotFound(new { message = "Order not found." });
             }
 
-            var orderItem = await _context.orderItems
-                .FirstOrDefaultAsync(item => item.OrderItemsID == orderItemId && item.OrderID == orderId);
-
-            if (orderItem == null)
+            if (result == UpdateOrderItemStatus.OrderItemNotFound)
             {
                 return NotFound(new { message = "Order item not found." });
             }
-
-            orderItem.Quantity = request.Quantity;
-            await _context.SaveChangesAsync();
 
             return Ok(new { message = "Order item updated." });
         }
 
         public class CreateOrderRequest
         {
-            public string? OrderId { get; set; }
             public DateTime? OrderDate { get; set; }
             public int CustomerId { get; set; }
-            public decimal OrderTotal { get; set; }
             public string FulfillmentType { get; set; } = "pickup";
-            public string? DeliveryAddress { get; set; }
+            public string DeliveryAddress { get; set; } = string.Empty;
             public List<CreateOrderLineRequest> OrderLines { get; set; } = new();
         }
 
@@ -289,7 +249,8 @@ namespace MatzahBakery.Web.Controllers
             public DateTime? OrderDate { get; set; }
             public int CustomerId { get; set; }
             public string FulfillmentType { get; set; } = "pickup";
-            public string? DeliveryAddress { get; set; }
+            public string DeliveryAddress { get; set; } = string.Empty;
+            public List<CreateOrderLineRequest> OrderLines { get; set; } = new();
         }
 
         public class UpdateOrderItemRequest
@@ -314,20 +275,12 @@ namespace MatzahBakery.Web.Controllers
             public List<OrderItemDto> Items { get; set; } = new();
         }
 
-        private static string BuildCustomerAddress(Customer customer)
+        private static decimal CalculateOrderTotal(decimal subTotal, bool isDelivery)
         {
-            var addressParts = new[]
-            {
-                customer.Address,
-                customer.Apartment,
-                customer.City,
-                customer.State,
-                customer.ZipCode
-            }
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value!.Trim());
-
-            return string.Join(", ", addressParts);
+            var deliveryFee = isDelivery ? DeliveryFee : 0;
+            var taxableAmount = subTotal + deliveryFee;
+            var taxAmount = taxableAmount * TaxRate;
+            return taxableAmount + taxAmount;
         }
 
         public class OrderItemDto

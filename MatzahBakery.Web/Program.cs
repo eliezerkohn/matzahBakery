@@ -13,7 +13,13 @@ public class Program
         {
             throw new InvalidOperationException("Missing connection string: ConnectionStrings:ConStr");
         }
+        // Tag: Data Context + Repositories DI
         builder.Services.AddScoped(_ => new MatzahBakeryDataContext(connStr));
+        builder.Services.AddScoped<CustomersRepository>();
+        builder.Services.AddScoped<AdminCustomersRepository>();
+        builder.Services.AddScoped<ProductsRepository>();
+        builder.Services.AddScoped<ProductTypesRepository>();
+        builder.Services.AddScoped<OrdersRepository>();
         builder.Services.AddControllersWithViews();
         var app = builder.Build();
         if (!app.Environment.IsDevelopment())
