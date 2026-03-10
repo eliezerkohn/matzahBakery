@@ -81,8 +81,12 @@ body,
   width: 28px;
   height: 28px;
   object-fit: contain;
-  filter: saturate(0) brightness(1.85);
-  opacity: 0.92;
+  background: rgba(255, 247, 234, 0.94);
+  border-radius: 999px;
+  padding: 2px;
+  filter: none;
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(255, 230, 198, 0.28);
 }
 
 .app-navbar__wordmark {
@@ -474,6 +478,17 @@ textarea:focus {
 
 .page-home {
   max-width: 880px;
+}
+
+@media (min-width: 768px) {
+  .page-home {
+    min-height: calc(100vh - 68px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
 }
 
 .page-home .order-title {

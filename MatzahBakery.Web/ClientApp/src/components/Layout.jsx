@@ -48,9 +48,9 @@ const Layout = ({ children }) => {
                         </button>
                         <div
                             id="main-nav"
-                            className={`navbar-collapse collapse ${isNavOpen ? 'show' : ''} d-sm-inline-flex justify-content-between`}
+                            className={`navbar-collapse collapse ${isNavOpen ? 'show' : ''} d-sm-inline-flex justify-content-sm-end`}
                         >
-                            <ul className="navbar-nav flex-grow-1">
+                            <ul className="navbar-nav ms-sm-auto align-items-sm-center">
                                 {navItems.map((item) => (
                                     <li className="nav-item" key={item.to}>
                                         <Link

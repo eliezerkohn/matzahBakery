@@ -7,6 +7,7 @@ import GuestLoginModal from '../components/order/GuestLoginModal';
 import OrderSuccessModal from '../components/order/OrderSuccessModal';
 import { formatCurrency } from '../utils/formatters';
 import { DELIVERY_FEE } from '../utils/constants';
+import { isValidPhoneDigits, normalizePhoneDigits, safeTrim, toPositiveInt } from '../utils/security';
 
 const getLineKey = (productId, productTypeId) => `${productId}:${productTypeId}`;
 const requiredCustomerFields = ['firstName', 'lastName', 'email', 'phoneNumber', 'address', 'city', 'state', 'zipCode'];
@@ -73,10 +74,10 @@ const Order = () => {
         const loadPageData = async () => {
             setLoading(true);
             try {
-                const customerId = searchParams.get('customerId');
+                const customerId = toPositiveInt(searchParams.get('customerId'));
                 const requests = [axios.get('/api/products')];
 
-                if (!customer && customerId) {
+                if (!customer && customerId > 0) {
                     requests.push(axios.get(`/api/customers/${customerId}`));
                 }
 
@@ -233,7 +234,7 @@ const Order = () => {
         }
 
         const currentCustomerId = getCustomerIdFrom(customerData);
-        if (!currentCustomerId) {
+        if (!toPositiveInt(currentCustomerId)) {
             setSubmitState({
                 loading: false,
                 message: 'Please log in before submitting your order.',
@@ -258,7 +259,7 @@ const Order = () => {
 
         const payload = {
             orderDate: fulfillmentDate,
-            customerId: currentCustomerId,
+            customerId: toPositiveInt(currentCustomerId),
             fulfillmentType,
             deliveryAddress: fulfillmentType === 'delivery' ? resolvedDeliveryAddress : '',
             orderTotal,
@@ -304,9 +305,14 @@ const Order = () => {
     };
 
     const handleGuestPhoneLookup = async () => {
-        const cleanedPhone = guestPhoneNumber.replace(/\D/g, '');
+        const cleanedPhone = normalizePhoneDigits(guestPhoneNumber);
         if (!cleanedPhone) {
             setGuestAuthMessage('Enter a phone number to continue.');
+            return;
+        }
+
+        if (!isValidPhoneDigits(cleanedPhone)) {
+            setGuestAuthMessage('Please enter a valid phone number.');
             return;
         }
 
@@ -358,15 +364,15 @@ const Order = () => {
         setGuestAuthMessage('');
 
         const payload = {
-            firstName: guestRegistrationForm.firstName.trim(),
-            lastName: guestRegistrationForm.lastName.trim(),
-            email: guestRegistrationForm.email.trim(),
-            phoneNumber: guestRegistrationForm.phoneNumber.replace(/\D/g, ''),
-            address: guestRegistrationForm.address.trim(),
-            apartment: guestRegistrationForm.apartment.trim(),
-            city: guestRegistrationForm.city.trim(),
-            state: guestRegistrationForm.state.trim(),
-            zipCode: guestRegistrationForm.zipCode.trim()
+            firstName: safeTrim(guestRegistrationForm.firstName),
+            lastName: safeTrim(guestRegistrationForm.lastName),
+            email: safeTrim(guestRegistrationForm.email, 160),
+            phoneNumber: normalizePhoneDigits(guestRegistrationForm.phoneNumber),
+            address: safeTrim(guestRegistrationForm.address, 200),
+            apartment: safeTrim(guestRegistrationForm.apartment, 60),
+            city: safeTrim(guestRegistrationForm.city, 80),
+            state: safeTrim(guestRegistrationForm.state, 40),
+            zipCode: safeTrim(guestRegistrationForm.zipCode, 20)
         };
 
         try {
@@ -391,13 +397,13 @@ const Order = () => {
     };
 
     const handleViewOrdersClick = () => {
-        const customerId = getCustomerId();
+        const customerId = toPositiveInt(getCustomerId());
         if (!customerId) {
             navigate('/admin/orders');
             return;
         }
 
-        const customerName = `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim();
+        const customerName = safeTrim(`${customer?.firstName || ''} ${customer?.lastName || ''}`, 120);
         const query = new URLSearchParams({ customerId: String(customerId) });
         if (customerName) {
             query.set('customerName', customerName);

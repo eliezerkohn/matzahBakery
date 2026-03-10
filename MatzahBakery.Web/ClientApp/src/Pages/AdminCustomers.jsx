@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import AdminCustomersTable from '../components/admin/customers/AdminCustomersTable';
+import { safeTrim, toPositiveInt } from '../utils/security';
 
 const emptyEditForm = {
     firstName: '',
@@ -118,13 +119,13 @@ const AdminCustomers = () => {
 
     const viewCustomerOrders = (customer) => {
         // Tag: Navigate To Filtered Orders
-        const customerId = Number(customer?.id) || 0;
+        const customerId = toPositiveInt(customer?.id);
         if (!customerId) {
             setMessage('Could not open orders for this customer.');
             return;
         }
 
-        const customerName = `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim();
+        const customerName = safeTrim(`${customer?.firstName || ''} ${customer?.lastName || ''}`, 120);
         const query = new URLSearchParams({ customerId: String(customerId) });
         if (customerName) {
             query.set('customerName', customerName);
@@ -134,7 +135,13 @@ const AdminCustomers = () => {
     };
 
     const addOrderForCustomer = (customerId) => {
-        navigate(`/order?customerId=${customerId}`);
+        const safeCustomerId = toPositiveInt(customerId);
+        if (!safeCustomerId) {
+            setMessage('Could not start order because customer id is invalid.');
+            return;
+        }
+
+        navigate(`/order?customerId=${safeCustomerId}`);
     };
 
     if (loading) {

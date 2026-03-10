@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { sortTypesWithRegularFirst } from '../utils/sorters';
+import { toPositiveInt } from '../utils/security';
 
 const initialProductForm = {
     productName: '',
@@ -80,13 +81,20 @@ const Admin = () => {
     };
 
     const removeProduct = async (productId) => {
+        const safeProductId = toPositiveInt(productId);
+        if (!safeProductId) {
+            setMessage('Invalid product id.');
+            setIsError(true);
+            return;
+        }
+
         const shouldDelete = window.confirm('Delete this product and its type links? This action cannot be undone.');
         if (!shouldDelete) {
             return;
         }
 
         try {
-            await axios.delete(`/api/products/${productId}`);
+            await axios.delete(`/api/products/${safeProductId}`);
             setMessage('Product removed.');
             setIsError(false);
             await loadData();
@@ -218,13 +226,20 @@ const Admin = () => {
     };
 
     const removeGlobalType = async (productTypeId) => {
+        const safeProductTypeId = toPositiveInt(productTypeId);
+        if (!safeProductTypeId) {
+            setMessage('Invalid type id.');
+            setIsError(true);
+            return;
+        }
+
         const shouldDelete = window.confirm('Delete this global type? It may affect linked products.');
         if (!shouldDelete) {
             return;
         }
 
         try {
-            await axios.delete(`/api/product-types/${productTypeId}`);
+            await axios.delete(`/api/product-types/${safeProductTypeId}`);
             setMessage('Global type removed.');
             setIsError(false);
             await loadData();
@@ -285,13 +300,21 @@ const Admin = () => {
     };
 
     const removeType = async (productId, productTypeId) => {
+        const safeProductId = toPositiveInt(productId);
+        const safeProductTypeId = toPositiveInt(productTypeId);
+        if (!safeProductId || !safeProductTypeId) {
+            setMessage('Invalid product/type id.');
+            setIsError(true);
+            return;
+        }
+
         const shouldDelete = window.confirm('Remove this type from the selected product?');
         if (!shouldDelete) {
             return;
         }
 
         try {
-            await axios.delete(`/api/products/${productId}/types/${productTypeId}`);
+            await axios.delete(`/api/products/${safeProductId}/types/${safeProductTypeId}`);
             setMessage('Type removed.');
             setIsError(false);
             await loadData();

@@ -5,6 +5,7 @@ import AdminOrdersFilters from '../components/admin/orders/AdminOrdersFilters';
 import AdminOrdersTable from '../components/admin/orders/AdminOrdersTable';
 import AdminOrderReceiptModal from '../components/admin/orders/AdminOrderReceiptModal';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { safeTrim, toPositiveInt } from '../utils/security';
 
 const AdminOrders = () => {
     // Tag: Navigation and page state
@@ -72,13 +73,19 @@ const AdminOrders = () => {
             quantity: Number(item.quantity) || 0
         }));
 
-        navigate(`/order?customerId=${order.customerId}`, {
+        const customerId = toPositiveInt(order.customerId);
+        if (!customerId) {
+            setMessage('Cannot edit this order because customer id is invalid.');
+            return;
+        }
+
+        navigate(`/order?customerId=${customerId}`, {
             state: {
                 prefillOrder: {
-                    orderId: order.orderId,
+                    orderId: toPositiveInt(order.orderId),
                     fulfillmentType: order.fulfillmentType || 'pickup',
                     orderDate: order.orderDate,
-                    deliveryAddress: order.deliveryAddress || '',
+                    deliveryAddress: safeTrim(order.deliveryAddress || '', 220),
                     orderLines
                 }
             }

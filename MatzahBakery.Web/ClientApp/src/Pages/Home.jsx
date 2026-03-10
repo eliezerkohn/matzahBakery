@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { isValidPhoneDigits, normalizePhoneDigits, safeTrim, toPositiveInt } from '../utils/security';
 
 const Home = () => {
 	const navigate = useNavigate();
@@ -44,19 +45,19 @@ const Home = () => {
 	};
 
 	const handlePhoneInputChange = (event) => {
-		const digitsOnly = event.target.value.replace(/\D/g, '');
+		const digitsOnly = normalizePhoneDigits(event.target.value);
 		setPhoneNumber(digitsOnly);
 	};
 
 	const handlePhoneCheck = async () => {
-		const cleanedPhone = phoneNumber.replace(/\D/g, '');
+		const cleanedPhone = normalizePhoneDigits(phoneNumber);
 		if (!cleanedPhone) {
 			setErrorMessage('Enter a phone number to continue.');
 			return;
 		}
 
-		if (cleanedPhone.length < 10) {
-			setErrorMessage('Please enter at least 10 digits for the phone number.');
+		if (!isValidPhoneDigits(cleanedPhone)) {
+			setErrorMessage('Please enter a valid phone number.');
 			return;
 		}
 
@@ -69,7 +70,7 @@ const Home = () => {
 			});
 
 			const foundCustomer = response.data;
-			const customerId = foundCustomer?.customerId || foundCustomer?.id;
+			const customerId = toPositiveInt(foundCustomer?.customerId || foundCustomer?.id);
 
 			if (customerId) {
 				goToOrderPage(foundCustomer);
@@ -95,15 +96,15 @@ const Home = () => {
 		setErrorMessage('');
 
 		const payload = {
-			firstName: customer.firstName.trim(),
-			lastName: customer.lastName.trim(),
-			email: customer.email.trim(),
-			phoneNumber: customer.phoneNumber.replace(/\D/g, ''),
-			address: customer.address.trim(),
-			apartment: customer.apartment.trim(),
-			city: customer.city.trim(),
-			state: customer.state.trim(),
-			zipCode: customer.zipCode.trim()
+			firstName: safeTrim(customer.firstName),
+			lastName: safeTrim(customer.lastName),
+			email: safeTrim(customer.email, 160),
+			phoneNumber: normalizePhoneDigits(customer.phoneNumber),
+			address: safeTrim(customer.address, 200),
+			apartment: safeTrim(customer.apartment, 60),
+			city: safeTrim(customer.city, 80),
+			state: safeTrim(customer.state, 40),
+			zipCode: safeTrim(customer.zipCode, 20)
 		};
 
 		try {
@@ -154,7 +155,7 @@ const Home = () => {
 
 				<div className="col-12">
 					<button type="button" className="btn btn-outline-secondary home-guest-btn" onClick={handleGuestCheckout} disabled={isLoading}>
-						Log In as Guest
+						{isLoading ? 'Processing...' : 'Log In as Guest'}
 					</button>
 				</div>
 
