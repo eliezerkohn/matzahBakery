@@ -5,8 +5,11 @@ const AdminOrdersFilters = ({
     customerFilter,
     dateSearch,
     onDateSearchChange,
-    onClearDate
+    onClearDate,
+    onClearAll
 }) => {
+    const hasActiveFilters = Boolean(searchTerm || dateSearch || customerFilter);
+
     return (
         <>
             {/* Tag: Text Search */}
@@ -57,6 +60,14 @@ const AdminOrdersFilters = ({
                     )}
                 </div>
             </div>
+
+            {hasActiveFilters && (
+                <div className="mb-3">
+                    <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onClearAll}>
+                        Clear All Filters
+                    </button>
+                </div>
+            )}
         </>
     );
 };

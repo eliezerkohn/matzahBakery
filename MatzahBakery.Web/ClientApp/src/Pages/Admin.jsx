@@ -80,6 +80,11 @@ const Admin = () => {
     };
 
     const removeProduct = async (productId) => {
+        const shouldDelete = window.confirm('Delete this product and its type links? This action cannot be undone.');
+        if (!shouldDelete) {
+            return;
+        }
+
         try {
             await axios.delete(`/api/products/${productId}`);
             setMessage('Product removed.');
@@ -213,6 +218,11 @@ const Admin = () => {
     };
 
     const removeGlobalType = async (productTypeId) => {
+        const shouldDelete = window.confirm('Delete this global type? It may affect linked products.');
+        if (!shouldDelete) {
+            return;
+        }
+
         try {
             await axios.delete(`/api/product-types/${productTypeId}`);
             setMessage('Global type removed.');
@@ -275,6 +285,11 @@ const Admin = () => {
     };
 
     const removeType = async (productId, productTypeId) => {
+        const shouldDelete = window.confirm('Remove this type from the selected product?');
+        if (!shouldDelete) {
+            return;
+        }
+
         try {
             await axios.delete(`/api/products/${productId}/types/${productTypeId}`);
             setMessage('Type removed.');
@@ -322,8 +337,11 @@ const Admin = () => {
     }
 
     return (
-        <div className="container py-5">
-            <h1 className="order-title mb-4">Admin</h1>
+        <div className="container py-5 page-admin">
+            <div className="page-hero mb-4">
+                <h1 className="order-title mb-1">Admin</h1>
+                <p className="page-subtitle mb-0">Manage products, global types, and per-product pricing in one place.</p>
+            </div>
 
             {message && <div className={`mb-3 ${isError ? 'text-danger' : 'text-success'}`}>{message}</div>}
 

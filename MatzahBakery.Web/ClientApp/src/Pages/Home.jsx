@@ -51,6 +51,12 @@ const Home = () => {
 	const handlePhoneCheck = async () => {
 		const cleanedPhone = phoneNumber.replace(/\D/g, '');
 		if (!cleanedPhone) {
+			setErrorMessage('Enter a phone number to continue.');
+			return;
+		}
+
+		if (cleanedPhone.length < 10) {
+			setErrorMessage('Please enter at least 10 digits for the phone number.');
 			return;
 		}
 
@@ -121,27 +127,33 @@ const Home = () => {
 	};
 
 	return (
-		<div className="container py-5">
-			<h1 className="order-title mb-4">Customer Information</h1>
+		<div className="container py-5 page-home">
+			<div className="home-header mb-4">
+				<h1 className="order-title mb-1">Customer Information</h1>
+				<p className="page-subtitle mb-0">Enter your phone number to start.</p>
+			</div>
 			<form className="row g-3" onSubmit={(event) => event.preventDefault()}>
-				<div className="col-12 col-md-6">
+				<div className="col-12">
 					<label className="form-label">Phone Number</label>
-					<input
-						className="form-control"
-						value={phoneNumber}
-						onChange={handlePhoneInputChange}
-						inputMode="numeric"
-						pattern="[0-9]*"
-					/>
-				</div>
-				<div className="col-12 col-md-6 d-flex align-items-end">
-					<button type="button" className="btn btn-dark w-100" onClick={handlePhoneCheck} disabled={isLoading}>
-						Check Phone Number
-					</button>
+					<div className="input-group home-phone-group">
+						<input
+							className="form-control"
+							value={phoneNumber}
+							onChange={handlePhoneInputChange}
+							placeholder="Phone number"
+							autoComplete="tel"
+							maxLength={15}
+							inputMode="numeric"
+							pattern="[0-9]*"
+						/>
+						<button type="button" className="btn btn-dark home-phone-btn" onClick={handlePhoneCheck} disabled={isLoading}>
+							{isLoading ? 'Checking...' : 'Check Phone Number'}
+						</button>
+					</div>
 				</div>
 
 				<div className="col-12">
-					<button type="button" className="btn btn-outline-secondary" onClick={handleGuestCheckout} disabled={isLoading}>
+					<button type="button" className="btn btn-outline-secondary home-guest-btn" onClick={handleGuestCheckout} disabled={isLoading}>
 						Log In as Guest
 					</button>
 				</div>
@@ -154,6 +166,7 @@ const Home = () => {
 								className="form-control"
 								name="firstName"
 								value={customer.firstName}
+								autoComplete="given-name"
 								onChange={handleCustomerChange}
 							/>
 						</div>
@@ -163,6 +176,7 @@ const Home = () => {
 								className="form-control"
 								name="lastName"
 								value={customer.lastName}
+								autoComplete="family-name"
 								onChange={handleCustomerChange}
 							/>
 						</div>
@@ -173,6 +187,7 @@ const Home = () => {
 								className="form-control"
 								name="email"
 								value={customer.email}
+								autoComplete="email"
 								onChange={handleCustomerChange}
 							/>
 						</div>
@@ -182,6 +197,7 @@ const Home = () => {
 								className="form-control"
 								name="address"
 								value={customer.address}
+								autoComplete="street-address"
 								onChange={handleCustomerChange}
 							/>
 						</div>
@@ -200,6 +216,7 @@ const Home = () => {
 								className="form-control"
 								name="city"
 								value={customer.city}
+								autoComplete="address-level2"
 								onChange={handleCustomerChange}
 							/>
 						</div>
@@ -209,6 +226,7 @@ const Home = () => {
 								className="form-control"
 								name="state"
 								value={customer.state}
+								autoComplete="address-level1"
 								onChange={handleCustomerChange}
 							/>
 						</div>
@@ -218,6 +236,7 @@ const Home = () => {
 								className="form-control"
 								name="zipCode"
 								value={customer.zipCode}
+								autoComplete="postal-code"
 								onChange={handleCustomerChange}
 							/>
 						</div>
@@ -232,7 +251,7 @@ const Home = () => {
 							disabled={!isCustomerComplete() || isLoading}
 							onClick={handleContinue}
 						>
-							Continue to Order
+							{isLoading ? 'Saving...' : 'Continue to Order'}
 						</button>
 					</div>
 				)}

@@ -44,6 +44,11 @@ const AdminOrders = () => {
 
     // Tag: Actions
     const deleteOrder = async (orderId) => {
+        const shouldDelete = window.confirm(`Delete order #${orderId}? This action cannot be undone.`);
+        if (!shouldDelete) {
+            return;
+        }
+
         try {
             await axios.delete(`/api/orders/${orderId}`);
             setMessage('Order deleted.');
@@ -150,9 +155,12 @@ const AdminOrders = () => {
     }
 
     return (
-        <div className="container py-5">
+        <div className="container py-5 page-admin-orders">
             {/* Tag: Page Title */}
-            <h1 className="order-title mb-4">{pageTitle}</h1>
+            <div className="page-hero mb-4">
+                 <h1 className="order-title mb-1">{pageTitle}</h1>
+                <p className="page-subtitle mb-0">Search, filter, review receipts, and edit active customer orders.</p>
+            </div>
 
             {/* Tag: Filters Section */}
             <AdminOrdersFilters
@@ -163,6 +171,11 @@ const AdminOrders = () => {
                 dateSearch={dateSearch}
                 onDateSearchChange={setDateSearch}
                 onClearDate={() => setDateSearch('')}
+                onClearAll={() => {
+                    setSearchTerm('');
+                    setDateSearch('');
+                    setCustomerFilter('');
+                }}
             />
 
             {/* Tag: Page Message */}

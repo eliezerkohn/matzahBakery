@@ -146,6 +146,7 @@ const Order = () => {
     );
 
     const canShowViewOrders = !guestMode || isCustomerComplete;
+    const todayIso = new Date().toISOString().slice(0, 10);
 
     const selectedLines = useMemo(() => {
         const lines = [];
@@ -413,6 +414,11 @@ const Order = () => {
         <div className="order-page container-fluid px-3 px-lg-4 py-4 py-lg-5">
             <div className="order-page__heading mb-4">
                 <h1 className="order-title mb-1">{isEditingOrder ? `Updating order #${editingOrderId}` : 'Build Order'}</h1>
+                <p className="page-subtitle mb-0">
+                    {isEditingOrder
+                        ? 'Adjust quantities, fulfillment, or delivery details before saving.'
+                        : 'Select product types and quantities, then review totals before submitting.'}
+                </p>
             </div>
 
             {!isCustomerComplete && !guestMode && (
@@ -459,6 +465,7 @@ const Order = () => {
                                     type="date"
                                     className="form-control"
                                     value={fulfillmentDate}
+                                    min={todayIso}
                                     onChange={(event) => setFulfillmentDate(event.target.value)}
                                 />
 
@@ -507,15 +514,22 @@ const Order = () => {
                             />
                         ))}
 
-                        <div className="d-flex gap-2 align-items-center">
+                        <div className="d-flex gap-2 align-items-center flex-wrap">
                             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/')}>
                                 Back Home
                             </button>
-                            <button type="submit" className="btn btn-dark" disabled={submitState.loading || !catalog.length}>
+                            <button
+                                type="submit"
+                                className="btn btn-dark"
+                                disabled={submitState.loading || !catalog.length || !selectedLines.length}
+                            >
                                 {submitState.loading
                                     ? (isEditingOrder ? 'Updating...' : 'Submitting...')
                                     : (isEditingOrder ? 'Update Order' : 'Submit Order')}
                             </button>
+                            {!selectedLines.length && !submitState.loading && (
+                                <span className="small text-muted">Add at least one item to submit.</span>
+                            )}
                             {submitState.message && (
                                 <span className={submitState.isError ? 'text-danger' : 'text-success'}>{submitState.message}</span>
                             )}

@@ -1,7 +1,11 @@
 const Contact = () => {
     return (
-        <div className="container py-5">
-            <h1 className="order-title mb-4">Contact Us</h1>
+        <div className="container py-5 page-contact">
+            <div className="page-hero mb-4">
+                <div className="page-kicker">Bakery Support</div>
+                <h1 className="order-title mb-1">Contact Us</h1>
+                <p className="page-subtitle mb-0">Reach us for orders, pickup timing, and seasonal availability.</p>
+            </div>
 
             <div className="row g-4">
                 <div className="col-12 col-lg-6">

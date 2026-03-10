@@ -99,6 +99,11 @@ const AdminCustomers = () => {
     };
 
     const deleteCustomer = async (id) => {
+        const shouldDelete = window.confirm(`Delete customer #${id}? This action cannot be undone.`);
+        if (!shouldDelete) {
+            return;
+        }
+
         try {
             await axios.delete(`/api/admin/customers/${id}`);
             setMessage('Customer deleted.');
@@ -137,9 +142,12 @@ const AdminCustomers = () => {
     }
 
     return (
-        <div className="container py-5">
+        <div className="container py-5 page-admin-customers">
             {/* Tag: Page Title */}
-            <h1 className="order-title mb-4">All Customers</h1>
+            <div className="page-hero mb-4">
+                <h1 className="order-title mb-1">All Customers</h1>
+                <p className="page-subtitle mb-0">Update profiles, start orders quickly, and jump to each customer order history.</p>
+            </div>
 
             {/* Tag: Search Section */}
             <div className="mb-3 d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">

@@ -13,6 +13,14 @@ const Layout = ({ children }) => {
     const location = useLocation();
     const [isNavOpen, setIsNavOpen] = useState(false);
 
+    const isActivePath = (path) => {
+        if (path === '/') {
+            return location.pathname === '/';
+        }
+
+        return location.pathname.startsWith(path);
+    };
+
     useEffect(() => {
         setIsNavOpen(false);
     }, [location.pathname, location.search]);
@@ -20,11 +28,16 @@ const Layout = ({ children }) => {
     return (
         <div className="app-shell">
             <header>
-                <nav className="navbar navbar-expand-sm navbar-dark fixed-top bg-dark border-bottom box-shadow">
+                <nav className="navbar navbar-expand-sm fixed-top app-navbar border-bottom box-shadow">
                     <div className="container">
-                        <span className="navbar-brand">Satmar Matzah Bakery</span>
+                        <span className="navbar-brand app-navbar__brand" aria-label="Satmar Matzah Bakery">
+                            <span className="app-navbar__brand-wrap">
+                                <img src="/SatmarMatzah.svg" alt="" className="app-navbar__logo" />
+                                <span className="app-navbar__wordmark">Satmar Matzah Bakery</span>
+                            </span>
+                        </span>
                         <button
-                            className="navbar-toggler"
+                            className="navbar-toggler app-navbar__toggler"
                             type="button"
                             aria-controls="main-nav"
                             aria-expanded={isNavOpen}
@@ -40,7 +53,11 @@ const Layout = ({ children }) => {
                             <ul className="navbar-nav flex-grow-1">
                                 {navItems.map((item) => (
                                     <li className="nav-item" key={item.to}>
-                                        <Link to={item.to} className="nav-link text-light" onClick={() => setIsNavOpen(false)}>
+                                        <Link
+                                            to={item.to}
+                                            className={`nav-link app-nav-link ${isActivePath(item.to) ? 'is-active' : ''}`}
+                                            onClick={() => setIsNavOpen(false)}
+                                        >
                                             {item.label}
                                         </Link>
                                     </li>
