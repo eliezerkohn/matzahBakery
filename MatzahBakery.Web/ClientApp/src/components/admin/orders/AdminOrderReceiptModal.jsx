@@ -71,12 +71,6 @@ const AdminOrderReceiptModal = ({ receiptOrder, onClose, formatDate, formatCurre
                     </div>
                 )}
 
-                {/* Tag: Totals - Tax */}
-                <div className="receipt-total mt-2 pt-2">
-                    <span>Tax</span>
-                    <strong>{formatCurrency(totals.taxAmount)}</strong>
-                </div>
-
                 {/* Tag: Totals - Grand Total */}
                 <div className="receipt-total mt-2 pt-2">
                     <span>Grand Total</span>

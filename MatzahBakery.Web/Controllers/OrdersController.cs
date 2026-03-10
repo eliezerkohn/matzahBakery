@@ -10,7 +10,6 @@ namespace MatzahBakery.Web.Controllers
     {
         private readonly OrdersRepository _repository;
         private const decimal DeliveryFee = 25m;
-        private const decimal TaxRate = 0.08875m;
 
         public OrdersController(OrdersRepository repository)
         {
@@ -278,9 +277,7 @@ namespace MatzahBakery.Web.Controllers
         private static decimal CalculateOrderTotal(decimal subTotal, bool isDelivery)
         {
             var deliveryFee = isDelivery ? DeliveryFee : 0;
-            var taxableAmount = subTotal + deliveryFee;
-            var taxAmount = taxableAmount * TaxRate;
-            return taxableAmount + taxAmount;
+            return subTotal + deliveryFee;
         }
 
         public class OrderItemDto

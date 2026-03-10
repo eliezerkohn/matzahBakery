@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 const navItems = [
     { to: '/', label: 'Home' },
@@ -9,22 +10,39 @@ const navItems = [
 ];
 
 const Layout = ({ children }) => {
+    const location = useLocation();
+    const [isNavOpen, setIsNavOpen] = useState(false);
+
+    useEffect(() => {
+        setIsNavOpen(false);
+    }, [location.pathname, location.search]);
+
     return (
         <div className="app-shell">
             <header>
                 <nav className="navbar navbar-expand-sm navbar-dark fixed-top bg-dark border-bottom box-shadow">
                     <div className="container">
-                        <a className="navbar-brand">Satmar Matzah Bakery</a>
-                        <button className="navbar-toggler" type="button" data-toggle="collapse"
-                            data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                            aria-expanded="false" aria-label="Toggle navigation">
+                        <span className="navbar-brand">Satmar Matzah Bakery</span>
+                        <button
+                            className="navbar-toggler"
+                            type="button"
+                            aria-controls="main-nav"
+                            aria-expanded={isNavOpen}
+                            aria-label="Toggle navigation"
+                            onClick={() => setIsNavOpen((prev) => !prev)}
+                        >
                             <span className="navbar-toggler-icon"></span>
                         </button>
-                        <div className="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                        <div
+                            id="main-nav"
+                            className={`navbar-collapse collapse ${isNavOpen ? 'show' : ''} d-sm-inline-flex justify-content-between`}
+                        >
                             <ul className="navbar-nav flex-grow-1">
                                 {navItems.map((item) => (
                                     <li className="nav-item" key={item.to}>
-                                        <Link to={item.to} className="nav-link text-light">{item.label}</Link>
+                                        <Link to={item.to} className="nav-link text-light" onClick={() => setIsNavOpen(false)}>
+                                            {item.label}
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>
@@ -32,7 +50,7 @@ const Layout = ({ children }) => {
                     </div>
                 </nav>
             </header>
-            <div className="app-content container-fluid mt-5 px-0">
+            <div className="app-content container-fluid px-0">
                 {children}
             </div>
         </div>

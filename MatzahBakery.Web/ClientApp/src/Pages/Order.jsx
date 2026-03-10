@@ -6,7 +6,7 @@ import OrderReceiptPanel from '../components/order/OrderReceiptPanel';
 import GuestLoginModal from '../components/order/GuestLoginModal';
 import OrderSuccessModal from '../components/order/OrderSuccessModal';
 import { formatCurrency } from '../utils/formatters';
-import { DELIVERY_FEE, TAX_RATE } from '../utils/constants';
+import { DELIVERY_FEE } from '../utils/constants';
 
 const getLineKey = (productId, productTypeId) => `${productId}:${productTypeId}`;
 const requiredCustomerFields = ['firstName', 'lastName', 'email', 'phoneNumber', 'address', 'city', 'state', 'zipCode'];
@@ -178,9 +178,7 @@ const Order = () => {
 
     const subTotal = useMemo(() => selectedLines.reduce((sum, line) => sum + line.lineTotal, 0), [selectedLines]);
     const deliveryFee = fulfillmentType === 'delivery' ? DELIVERY_FEE : 0;
-    const taxableAmount = subTotal + deliveryFee;
-    const taxAmount = taxableAmount * TAX_RATE;
-    const orderTotal = taxableAmount + taxAmount;
+    const orderTotal = subTotal + deliveryFee;
     const deliveryAddressForOrder = useAccountAddress ? getCustomerAddress() : customDeliveryAddress.trim();
     const totalItemCount = useMemo(
         () => selectedLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
@@ -190,6 +188,15 @@ const Order = () => {
     // Tag: Actions
     const updateTypeQuantity = (productId, productTypeId, value) => {
         const key = getLineKey(productId, productTypeId);
+
+        if (value === '') {
+            setTypeQuantities((prev) => ({
+                ...prev,
+                [key]: ''
+            }));
+            return;
+        }
+
         const parsedQuantity = Math.max(0, Number(value) || 0);
         setTypeQuantities((prev) => ({
             ...prev,
@@ -529,7 +536,6 @@ const Order = () => {
                     formatCurrency={formatCurrency}
                     subTotal={subTotal}
                     deliveryFee={deliveryFee}
-                    taxAmount={taxAmount}
                     orderTotal={orderTotal}
                 />
             </div>

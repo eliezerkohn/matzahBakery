@@ -122,12 +122,11 @@ const AdminOrders = () => {
         const linesSubTotal = (order.items || []).reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
         const subTotal = Number(order.subTotal ?? linesSubTotal) || 0;
         const deliveryFee = Number(order.deliveryFee) || 0;
-        const orderTotal = Number(order.orderTotal) || 0;
-        const calculatedTax = orderTotal - subTotal - deliveryFee;
+        const fallbackTotal = subTotal + deliveryFee;
+        const orderTotal = Number(order.orderTotal ?? fallbackTotal) || fallbackTotal;
 
         return {
             subTotal,
-            taxAmount: Math.max(0, calculatedTax),
             deliveryFee,
             orderTotal
         };

@@ -11,7 +11,6 @@ const OrderReceiptPanel = ({
     formatCurrency,
     subTotal,
     deliveryFee,
-    taxAmount,
     orderTotal
 }) => {
     return (
@@ -77,11 +76,6 @@ const OrderReceiptPanel = ({
                             <strong>{formatCurrency(deliveryFee)}</strong>
                         </div>
                     )}
-
-                    <div className="receipt-total mt-2 pt-2">
-                        <span>Tax (8.875%)</span>
-                        <strong>{formatCurrency(taxAmount)}</strong>
-                    </div>
 
                     <div className="receipt-total mt-2 pt-2">
                         <span>Grand Total</span>

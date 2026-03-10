@@ -142,7 +142,7 @@ const AdminCustomers = () => {
             <h1 className="order-title mb-4">All Customers</h1>
 
             {/* Tag: Search Section */}
-            <div className="mb-3 d-flex gap-2 align-items-center">
+            <div className="mb-3 d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
                 <input
                     className="form-control"
                     placeholder="Search by id, name, email, phone, or address"
@@ -152,7 +152,7 @@ const AdminCustomers = () => {
                 {!!searchTerm && (
                     <button
                         type="button"
-                        className="btn btn-sm btn-outline-secondary"
+                        className="btn btn-sm btn-outline-secondary align-self-start"
                         onClick={() => setSearchTerm('')}
                     >
                         Clear

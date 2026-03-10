@@ -5,64 +5,108 @@ const AdminOrdersTable = ({ filteredOrders, formatDate, formatCurrency, buildOrd
     }
 
     return (
-        // Tag: Orders Data Table
-        <div className="table-responsive">
-            <table className="table table-sm table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th>Order #</th>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>Items</th>
-                        <th>Item Count</th>
-                        <th>Order Total</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {/* Tag: Order Rows */}
-                    {filteredOrders.map((order) => (
-                        <tr key={order.orderId}>
-                            <td>{order.orderId}</td>
-                            <td>{formatDate(order.orderDate)}</td>
-                            <td>{order.customerName || '-'} (ID: {order.customerId})</td>
-                            <td style={{ minWidth: '260px' }}>{buildOrderItemsText(order.items)}</td>
-                            <td>{Number(order.itemCount) || 0}</td>
-                            <td>{formatCurrency(order.orderTotal)}</td>
-                            <td>
-                                {/* Tag: Row Actions */}
-                                <div className="d-flex gap-2">
-                                    <button
-                                        type="button"
-                                        className="btn btn-sm btn-dark"
-                                        onClick={() => onEditOrder(order)}
-                                        disabled={!(order.items || []).length}
-                                    >
-                                        Edit Order
-                                    </button>
+        <>
+            <div className="d-grid gap-3 d-lg-none">
+                {filteredOrders.map((order) => (
+                    <div key={order.orderId} className="card admin-mobile-card">
+                        <div className="card-body">
+                            <div className="admin-mobile-card__title">Order #{order.orderId}</div>
+                            <div className="admin-mobile-card__line"><strong>Date:</strong> {formatDate(order.orderDate)}</div>
+                            <div className="admin-mobile-card__line">
+                                <strong>Customer:</strong> {order.customerName || '-'} (ID: {order.customerId})
+                            </div>
+                            <div className="admin-mobile-card__line"><strong>Items:</strong> {buildOrderItemsText(order.items)}</div>
+                            <div className="admin-mobile-card__line"><strong>Item Count:</strong> {Number(order.itemCount) || 0}</div>
+                            <div className="admin-mobile-card__line"><strong>Total:</strong> {formatCurrency(order.orderTotal)}</div>
 
-                                    <button
-                                        type="button"
-                                        className="btn btn-sm btn-outline-primary"
-                                        onClick={() => onViewReceipt(order)}
-                                    >
-                                        View Receipt
-                                    </button>
+                            <div className="admin-mobile-card__actions mt-2">
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-dark"
+                                    onClick={() => onEditOrder(order)}
+                                    disabled={!(order.items || []).length}
+                                >
+                                    Edit Order
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={() => onViewReceipt(order)}
+                                >
+                                    View Receipt
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => onDeleteOrder(order.orderId)}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
 
-                                    <button
-                                        type="button"
-                                        className="btn btn-sm btn-outline-danger"
-                                        onClick={() => onDeleteOrder(order.orderId)}
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
+            {/* Tag: Orders Data Table */}
+            <div className="table-responsive d-none d-lg-block">
+                <table className="table table-sm table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Item Count</th>
+                            <th>Order Total</th>
+                            <th>Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        {/* Tag: Order Rows */}
+                        {filteredOrders.map((order) => (
+                            <tr key={order.orderId}>
+                                <td>{order.orderId}</td>
+                                <td>{formatDate(order.orderDate)}</td>
+                                <td>{order.customerName || '-'} (ID: {order.customerId})</td>
+                                <td style={{ minWidth: '260px' }}>{buildOrderItemsText(order.items)}</td>
+                                <td>{Number(order.itemCount) || 0}</td>
+                                <td>{formatCurrency(order.orderTotal)}</td>
+                                <td>
+                                    {/* Tag: Row Actions */}
+                                    <div className="d-flex gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-dark"
+                                            onClick={() => onEditOrder(order)}
+                                            disabled={!(order.items || []).length}
+                                        >
+                                            Edit Order
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-primary"
+                                            onClick={() => onViewReceipt(order)}
+                                        >
+                                            View Receipt
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-danger"
+                                            onClick={() => onDeleteOrder(order.orderId)}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </>
     );
 };
 

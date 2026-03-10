@@ -10,7 +10,7 @@ const AdminOrdersFilters = ({
     return (
         <>
             {/* Tag: Text Search */}
-            <div className="mb-3 d-flex gap-2 align-items-center">
+            <div className="mb-3 d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
                 <input
                     className="form-control"
                     placeholder="Search by order #, customer, product, or type"
@@ -20,7 +20,7 @@ const AdminOrdersFilters = ({
                 {!!searchTerm && (
                     <button
                         type="button"
-                        className="btn btn-sm btn-outline-secondary"
+                        className="btn btn-sm btn-outline-secondary align-self-start"
                         onClick={onClearSearch}
                     >
                         Clear
@@ -38,7 +38,7 @@ const AdminOrdersFilters = ({
             {/* Tag: Date Filter */}
             <div className="mb-3">
                 <label className="form-label">Filter by date</label>
-                <div className="d-flex gap-2 align-items-center">
+                <div className="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center">
                     <input
                         type="date"
                         className="form-control"
@@ -49,7 +49,7 @@ const AdminOrdersFilters = ({
                     {!!dateSearch && (
                         <button
                             type="button"
-                            className="btn btn-sm btn-outline-secondary"
+                            className="btn btn-sm btn-outline-secondary align-self-start"
                             onClick={onClearDate}
                         >
                             Clear
